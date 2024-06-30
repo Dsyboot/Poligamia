@@ -199,7 +199,16 @@ void main_window() {
                     DrawingText::drawText(win.getWindowSizeX() / 2, win.getWindowSizeY() / 2,"Guardando la figura...");
                     DrawingText::configureMargin(LEFT_TEXT, LEFT_TEXT);
                     delay(1500);
-                    key = -1; /* ignorar la tecla S luego del delay */
+
+                    /* Esperar que se termine de presionar las teclas */
+                    while (true) {
+                        if (kbhit()) {
+                            char crt = getch();
+                        }
+                        else {
+                            break;
+                        }
+                    }
                 }
             }
 
@@ -326,8 +335,8 @@ void load_config() {
         show_mouse_coordinates = smc;
     }
     catch(...) {
-        cout<<"Something get very very wrong...";
-        system("pause");
+        // Crear datos nuevos en caso de algun error
+        save_config(false);
     }
 
     /* Asignar el tamanio de la ventana y el titulo */

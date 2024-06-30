@@ -208,9 +208,6 @@ namespace dsy {
         int sizeX, sizeY;
         string title;
 
-        // Metodos privados
-        void loadIcon();
-        
         public:
         Window(); // Declaracion del constructor (createWindow();)
         Window(int width, int height, const char *title = "Window"); // Declaración del constructor (createWindow();)
@@ -424,17 +421,6 @@ namespace dsy {
     }
 
     /* ######### CLASE WINDOW ######## */
-    /* Metodo privado para cargar un icono */
-    void Window::loadIcon() {
-        try
-        {
-            HWND hwnd = GetForegroundWindow();
-            HICON hIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_ICON1));
-            SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        }
-        catch(...) {}
-    }
-
     /* Asignar funciones a los metodos constructores */
     Window::Window() : sizeX(640), sizeY(480), title("Window") {}
     Window::Window(int width, int height, const char *title) : sizeX(width), sizeY(height), title(title) {}
@@ -456,7 +442,7 @@ namespace dsy {
 
     /* Función para inicializar la ventana */
     void Window::initWindow() {
-        initwindow(sizeX, sizeY, title.data());
+        initwindow(sizeX, sizeY, title.c_str());
     }
 
     /* Funcion para limpiar la ventana */
@@ -802,7 +788,7 @@ namespace dsy {
     Point Mouse::getMousePos() {
         return Point(mousex(), mousey());
     }
-
+    
 }
 
 #endif // DSYGRAPH_HPP
