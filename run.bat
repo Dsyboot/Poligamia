@@ -1,6 +1,6 @@
 @echo off
 cls
 REM Correr el programa
-echo ejecutando...
+echo Ejecutando...
 poli17.exe
 @echo on

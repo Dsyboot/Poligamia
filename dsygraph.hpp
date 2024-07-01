@@ -215,7 +215,7 @@ namespace dsy {
         void modifyValues(int width, int height, const char *title = "Window");
         void modifyValues(Point size, const char *title = "Window");
         void initWindow();
-        void clearWindow(bool clearAll = true);
+        void clearWindow(bool clearAll = false);
         void closeWindow();
         bool hasWindowInitialized();
         int getWindowCodeError();
@@ -430,14 +430,14 @@ namespace dsy {
     void Window::modifyValues(int width, int height, const char *title) {
         sizeX = width;
         sizeY = height;
-        title = title;
+        this->title = string(title);
     }
 
     /* Metodo para modificar los valores de la ventana de forma segura */
     void Window::modifyValues(Point size, const char *title) {
         sizeX = size.getX();
         sizeY = size.getY();
-        title = title;
+        this->title = string(title);
     }
 
     /* Función para inicializar la ventana */

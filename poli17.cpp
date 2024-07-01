@@ -7,8 +7,8 @@
 #include "dsygraph.hpp"
 #include "dsyutil.hpp"
 
-#define PROGRAM_TITLE "poligamia"
-#define PROGRAM_TITLE_FIGURE "poligamia Figure Viewer"
+#define PROGRAM_TITLE "Poligamia"
+#define PROGRAM_TITLE_FIGURE "Poligamia Figure Viewer"
 
 /* Usar el espacio de nombres std, dsy, json */
 using namespace std;
@@ -31,11 +31,11 @@ Window win(default_win_size, PROGRAM_TITLE);
 Figure figurits;
 
 /* Funciones principales */
-void main_window();
-void load_config();
-void save_config(bool console = true);
-void info_window();
-void printFigureData();
+void main_window(); // Funcion principal para dibujar
+void load_config(); // Funcion para cargar la configuracion del programa
+void save_config(bool console = true); // Funcion para guardar la configuracion del programa
+void info_window(); // Funcion para mostrar la informacion del programa
+void printFigureData(); // Funcion para mostrar los datos de la figura guardada
 
 /* Funciones extras para manejo de archivos JSON */
 ordered_json load_json(const char* file);
@@ -52,9 +52,8 @@ bool isCCW(const Point& a, const Point& b, const Point& c);
 bool isEar(const vector<Point>& polygon, size_t i);
 
 /* Funciones para calcular el area y el perimetro del poligono */
-double distancia(const Point &a, const Point &b);
-double getPolyArea(const vector<Triangle> &triangles);
-double getPolyPerimetro(const vector<Triangle> &triangles);
+double getPolyArea(const vector<Point> &polygon);
+double getPolyPerimetro(const vector<Point> &polygon);
 
 /* Funciones extras de dibujo */
 void center_filled_rectangle(int cX, int cY, int radX, int radY);
@@ -111,6 +110,8 @@ int main() {
             else if (opcion.equals("4") && !figurits.empty()) {
                 cout<<"Cargando informacion de la ultima figura..."<<endl;
                 delay(750);
+
+                // Preparar el inicio de la ventana
                 load_config(); // Cargar datos del json
                 printFigureData(); // Cargar modo grafico
             }
@@ -131,6 +132,10 @@ int main() {
 }
 
 void main_window() {
+    // Cambiar la configuracion de la ventana para obtener mayor espacio
+    Point size(default_win_size.getX(), default_win_size.getY() + 30);
+    win.modifyValues(size, PROGRAM_TITLE);
+
     // Limpiar todo el modo gráfico
     win.initWindow();
     win.clearWindow();
@@ -138,7 +143,7 @@ void main_window() {
     /* Variables controladoras */
     int key = 0, curPoints = -1;
     int trianPTS = 0; // Para obtener las teclas presionadas
-    Point selectionLimit[] = {Point(10, 10), Point(win.getWindowSizeX() - 10, win.getWindowSizeY() - 10)}; // Para el borde
+    Point selectionLimit[] = {Point(10, 10), Point(default_win_size.getX() - 10, default_win_size.getY() - 10)}; // Para el borde
 
     /* Arreglo de puntos y triangulos */
     vector<Point> polygon;
@@ -252,15 +257,19 @@ void main_window() {
                 Draw::circle(polygon[0].getX(), polygon[0].getY(), 1);
             }
 
-            if (can_connect && can_triangulate) {
+            if (can_connect) {
                 /* Ejecutar si los puntos cambian */
                 if (curPoints != polygon.size()) {
+                    win.clearWindow();
                     curPoints = polygon.size();
-                    trian = triangulateEarClipping(polygon);
+                    
+                    if (can_triangulate) {
+                        trian = triangulateEarClipping(polygon);
+                    }
                 }
 
                 /* Dibujar si la longitud no es 0 */
-                if (trian.size() > 0) {
+                if (trian.size() > 0 && can_triangulate) {
                     Draw::setColor(default_line_color); // Establecer el color
                     Draw::drawPoly(trian, can_connect);
                     trianPTS = trian.size();
@@ -273,10 +282,26 @@ void main_window() {
         default_border_color.itsNULL() ? Draw::setColor(rgb_values) : Draw::setColor(default_border_color); // Establecer el color del borde
         Draw::rectangle(selectionLimit[0].getX(), selectionLimit[0].getY(), selectionLimit[1].getX(), selectionLimit[1].getY());
 
-        /* Dibujar el texto */
-        DrawingText::drawText(20, 20, String::format("Puntos: %d", polygon.size()).toArray());
-        DrawingText::drawText(20, 37, String::format("Triangulos: %d", trianPTS).toArray());
-        DrawingText::drawText(20, 54, String::format("Coordenadas del mouse: (%d, %d)", mousePos.getX(), mousePos.getY()).toArray());
+        /* Mostrar la cantidad de puntos si esta permitido */
+        if (show_points_quantity)
+        {
+            DrawingText::configureMargin(LEFT_TEXT, CENTER_TEXT);
+            DrawingText::drawText(20, size.getY() - 15, String::format("Puntos: %d", polygon.size()).toArray());
+        }
+
+        /* Mostrar la cantidad de triangulos si esta permitido */
+        if (show_triangles_quantity)
+        {
+            DrawingText::configureMargin(RIGHT_TEXT, CENTER_TEXT);
+            DrawingText::drawText(size.getX() - 20, size.getY() - 15, String::format("Triangulos: %d", trianPTS).toArray());
+        }
+
+        /* Mostrar las coordenas del mouse si esta permitido */
+        if (show_mouse_coordinates)
+        {
+            DrawingText::configureMargin(CENTER_TEXT, CENTER_TEXT);
+            DrawingText::drawText(size.getX() / 2, size.getY() - 15, String::format("Coordenadas del mouse: (%d, %d)", mousePos.getX(), mousePos.getY()).toArray());
+        }
 
         /* Limpiar pantalla al mover el mouse */
         if (mousePos.getX() != oldMousePos.getX() || mousePos.getY() != oldMousePos.getY())
@@ -401,6 +426,7 @@ void save_config(bool console) {
             cout<<"2: Color del borde"<<endl;
             cout<<"3: Color de los puntos"<<endl;
             cout<<"4: Color de las lineas"<<endl;
+            cout<<"5: Mas opciones"<<endl;
             cout<<"Otro: Volver atras"<<endl;
             cout<<">>> ";
             cin>>opcion;
@@ -438,7 +464,7 @@ void save_config(bool console) {
                             winsize = Point(size_x, size_y);
 
                             /* Mostrar mensaje final */
-                            cout<<String::format("Se ha guardado la ventana con estos nuevos datos: (%d, %d)\n", size_x, size_y);
+                            cout<<String::format("Se ha preparado la configuracion de la ventana con estos nuevos datos: (%d, %d)\n", size_x, size_y);
                             system("pause"); /* Esperar una tecla */
 
                             break;
@@ -469,7 +495,7 @@ void save_config(bool console) {
                             border_color = RGBColor(); // Color nulo
 
                             /* Mostrar mensaje final */
-                            cout<<String::format("Se ha guardado el color del borde con este nuevos dato: RGB\n");
+                            cout<<String::format("Se ha preparado la configuracion de el color del borde con este nuevos dato: RGB\n");
                             system("pause"); /* Esperar una tecla */
                             break;
                         }
@@ -499,7 +525,7 @@ void save_config(bool console) {
                                     border_color = RGBColor(red, green, blue);
 
                                     /* Mostrar mensaje final */
-                                    cout<<String::format("Se ha guardado el color del borde con estos nuevos datos: (%d, %d, %d)\n", red, green, blue);
+                                    cout<<String::format("Se ha preparado la configuracion de el color del borde con estos nuevos datos: (%d, %d, %d)\n", red, green, blue);
                                     system("pause"); /* Esperar una tecla */
                                     break;
                                 }
@@ -558,7 +584,7 @@ void save_config(bool console) {
                                 points_color = RGBColor(red, green, blue);
 
                                 /* Mostrar mensaje final */
-                                cout<<String::format("Se ha guardado el color de los puntos con estos nuevos datos: (%d, %d, %d)\n", red, green, blue);
+                                cout<<String::format("Se ha preparado la configuracion de el color de los puntos con estos nuevos datos: (%d, %d, %d)\n", red, green, blue);
                                 system("pause"); /* Esperar una tecla */
                                 break;
                             }
@@ -611,7 +637,7 @@ void save_config(bool console) {
                                 line_color = RGBColor(red, green, blue);
 
                                 /* Mostrar mensaje final */
-                                cout<<String::format("Se ha guardado el color de las lienas con estos nuevos datos: (%d, %d, %d)\n", red, green, blue);
+                                cout<<String::format("Se ha preparado la configuracion de el color de las lienas con estos nuevos datos: (%d, %d, %d)\n", red, green, blue);
                                 system("pause"); /* Esperar una tecla */
                                 break;
                             }
@@ -628,8 +654,73 @@ void save_config(bool console) {
                         }
                     }
                 }
+                /* More options */
+                else if (opcion.equals("5")) {
+                    /* Preparar los datos y limpiar pantalla */
+                    String input;
+                    system("cls");
+
+                    while (true)
+                    {
+                        cout<<"Configuracion Avanzada\n\n";
+                        cout<<"Elija el numero de una opcion:\n";
+                        cout<<String::format("1. Mostrar los puntos de la figura (%s)\n", csp ? "Activo" : "Inactivo");
+                        cout<<String::format("2. Mostrar las lineas de la figura (%s)\n", ctl ? "Activo" : "Inactivo");
+                        cout<<String::format("3. Permitir conexion de las lineas (%s)\n", cc ? "Activo" : "Inactivo");
+                        cout<<String::format("4. Mostrar la triangulacion de la figura (%s)\n", ct ? "Activo" : "Inactivo");
+                        cout<<String::format("5. Mostrar la cantidad de puntos de la figura (%s)\n", spq ? "Activo" : "Inactivo");
+                        cout<<String::format("6. Mostrar la cantidad de triangulos de la figura (%s)\n", stq ? "Activo" : "Inactivo");
+                        cout<<String::format("7. Mostrar las coordenadas del mouse (%s)\n", smc ? "Activo" : "Inactivo");
+                        cout<<"Otro: Volver atras"<<endl;
+                        cout<<">>> ";
+                        cin>>input;
+
+                        if (validInt(input))
+                        {
+                            if (input.equals("1"))
+                            {
+                                csp = !csp;
+                            }
+                            else if (input.equals("2"))
+                            {
+                                ctl = !ctl;
+                            }
+                            else if (input.equals("3"))
+                            {
+                                cc = !cc;
+                            }
+                            else if (input.equals("4"))
+                            {
+                                ct = !ct;
+                            }
+                            else if (input.equals("5"))
+                            {
+                                spq = !spq;
+                            }
+                            else if (input.equals("6"))
+                            {
+                                stq = !stq;
+                            }
+                            else if (input.equals("7"))
+                            {
+                                smc = !smc;
+                            }
+                            else {
+                                cout<<"Preparando la configuracion para guardar...";
+                                delay(750);
+                                break;
+                            }
+                        }
+                        else {
+                            cout<<"No se ha ingresado un numero valido!\n";
+                            system("pause");
+                        }
+
+                        system("cls");
+                    }
+                }
                 else {
-                    cout<<"Regresando y guardando..."<<endl;
+                    cout<<"Guardando los nuevos datos y regresando..."<<endl;
                     delay(750);
                     system("cls");
                     break;
@@ -677,11 +768,23 @@ void save_config(bool console) {
 void info_window() {
     system("cls");
 
+    /* Mostrar informacion base */
     cout<<"Poligamia\n\n";
     cout<<"Programa hecho en C++ 17\n";
     cout<<"Desarolladores: \n\n- Diego Isai Melara Flores\n- Kamila Dasilma Valle Castillo\n- Kimberlys Flores Lourdes Rostran\n\n";
     cout<<"Orientado a: Geometria Computacional\n";
     cout<<"Docente: Rhene Gonzalo Hernandez Berroteran\n";
+
+    /* Mostrar informacion de los botones */
+    cout<<"Teclas especiales: \n\n";
+    cout<<"Boton ESC: Funciona para salir de la ventana sin afectar el programa completamente\n";
+    cout<<"Boton P: Sirve para mostrar los puntos de la figura\n";
+    cout<<"Boton L: Sirve para mostrar las lineas donde van los puntos de la figura\n";
+    cout<<"Boton C: Sirve para conectar los puntos de la figura\n";
+    cout<<"Boton T: Sirve para mostrar la triangulacion de la figura (Tener en cuenta que el algoritmo no siempre lo hara)\n";
+    cout<<"Boton S: Sirve para guardar la figura actual, lo que sera util para obtener su area y perimetro\n\n";
+
+    /* Mostrar comentarios extras */
     cout<<"Notas: \n\nEl programa puede contener algunos errores visuales o en la triangulacion, ya que el algoritmo utilizado fue el de earClipping, un algoritmo que intenta buscar 'orejas' para triangular, en ciertos casos puede simplemente no funcionar, por favor comprenda que no todows los algoritmos son perfectos, ademas, este es el mas rapido y eficiente cuando se habla de la memoria\n\n";
 
     system("pause");
@@ -696,38 +799,19 @@ void printFigureData() {
     win.initWindow();
 
     /* Obtener los datos */
+    int trianPoints = 0;
     vector<Point> pointData = figurits.getPoints();
     vector<Triangle> triangData = triangulateEarClipping(pointData);
-    bool trian = triangData.size() == 0 ? false : true;
+    bool triangulable = triangData.size() == 0 ? false : true;
     Point selectionLimit[] = {Point(10, 10), Point(default_win_size.getX() - 10, default_win_size.getY() - 10)}; // Para el borde
 
     /* Calcular el area y el perimetro de la figura */
-    double area = getPolyArea(triangData);
-    double perimetro = getPolyPerimetro(triangData);
+    double area = getPolyArea(pointData);
+    double perimetro = getPolyPerimetro(pointData);
 
     /* Bucle simple para el programa */
     while (true)
     {
-        /* Dibujar la figura */
-        Draw::setColor(default_line_color);
-        Draw::drawPoly(pointData, true);
-
-        /* Dibujar contorno decorativo de la ventana (RGB / CELESTE) */
-        RGBColor rgb_values = Draw::generateRGB(3.9);
-        default_border_color.itsNULL() ? Draw::setColor(rgb_values) : Draw::setColor(default_border_color); // Establecer el color del borde
-        Draw::rectangle(selectionLimit[0].getX(), selectionLimit[0].getY(), selectionLimit[1].getX(), selectionLimit[1].getY());
-
-        /* Dibujar el texto */
-        DrawingText::configureMargin(LEFT_TEXT, RIGHT_TEXT);
-        DrawingText::drawText(20, default_win_size.getY() + 5, String::format("Puntos: %d", pointData.size()).toArray());
-        DrawingText::drawText(20, default_win_size.getY() + 30, String::format("Triangulable: %s", String::toString(trian).toArray()).toArray());
-        
-        if (trian) {
-            DrawingText::configureMargin(RIGHT_TEXT, RIGHT_TEXT);
-            DrawingText::drawText(default_win_size.getX() - 20, default_win_size.getY() + 5, String::format("Area de la figura: %.2f", area).toArray());
-            DrawingText::drawText(default_win_size.getX() - 20, default_win_size.getY() + 30, String::format("Perimetro de la figura: %.2f", perimetro).toArray());
-        }
-
         /* Obtener las teclas */
         if (kbhit())
         {
@@ -738,7 +822,56 @@ void printFigureData() {
             {
                 break;
             }
+
+            /* Si se presiona, se controla la observacion de puntos */
+            if (key == KEYBOARD_KEY_P) {
+                can_show_points = !can_show_points;
+                win.clearWindow();
+            }
+
+            /* Si se presiona, se controla la generacion de triangulacion */
+            if (key == KEYBOARD_KEY_T) {
+                trianPoints = 0;
+                can_triangulate = !can_triangulate;
+                win.clearWindow();
+            }
         }
+
+        /* Dibujar la figura */
+        Draw::setColor(default_line_color);
+        Draw::drawPoly(pointData, true);
+
+        /* Dibujar puntos si lo permite el usuario */
+        if (can_show_points) {
+            /* Dibujar círculos para simular puntos */
+            Draw::setColor(default_points_color); // Establecer el color
+            for (size_t i = 0; i < pointData.size(); i++) {
+                Point tmp = pointData[i];
+                Draw::circle(tmp.getX(), tmp.getY(), 2);
+            }
+        }
+
+        /* Triangular la figura si lo permite el usuario */
+        if (triangulable && can_triangulate) {
+            trianPoints = triangData.size();
+            Draw::setColor(default_line_color); // Establecer el color
+            Draw::drawPoly(triangData, can_connect);
+        }
+
+        /* Dibujar contorno decorativo de la ventana (RGB / CELESTE) */
+        RGBColor rgb_values = Draw::generateRGB(3.9);
+        default_border_color.itsNULL() ? Draw::setColor(rgb_values) : Draw::setColor(default_border_color); // Establecer el color del borde
+        Draw::rectangle(selectionLimit[0].getX(), selectionLimit[0].getY(), selectionLimit[1].getX(), selectionLimit[1].getY());
+
+        /* Dibujar el texto de la izquierda */
+        DrawingText::configureMargin(LEFT_TEXT, RIGHT_TEXT);
+        DrawingText::drawText(20, default_win_size.getY() + 5, String::format("Puntos: %d", pointData.size()).toArray());
+        DrawingText::drawText(20, default_win_size.getY() + 30, String::format("Triangulos: %d", trianPoints).toArray());
+
+        /* Dibujar el texto de la derecha */
+        DrawingText::configureMargin(RIGHT_TEXT, RIGHT_TEXT);
+        DrawingText::drawText(default_win_size.getX() - 20, default_win_size.getY() + 5, String::format("Area de la figura: %.2f", area).toArray());
+        DrawingText::drawText(default_win_size.getX() - 20, default_win_size.getY() + 30, String::format("Perimetro de la figura: %.2f", perimetro).toArray());
     }
 
     /* Cerrar la ventana grafica para finalizar */
@@ -907,54 +1040,48 @@ bool isEar(const vector<Point>& polygon, size_t i) {
     return true;
 }
 
-/* Funcion para obtener la distancia entre dos puntos */
-double distancia(const Point &a, const Point &b)
-{
-    /* Extraer los puntos para la formula */
-    int x1 = a.getX(); int y1 = a.getY();
-    int x2 = b.getX(); int y2 = b.getY();
-
-    return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
-}
-
 /* Funcion para obtener el area del poligono */
-double getPolyArea(const vector<Triangle> &triangles)
+double getPolyArea(const vector<Point> &polygon)
 {
-    /* Calcular el area dependiendo la cantidad de triangulos */
+    /* Preparar los datos para realizar los calculos */
     double maxArea = 0.0;
+    int n = polygon.size();
 
-    for (size_t i = 0; i < triangles.size(); i++)
+    if (n >= 3)
     {
-        /* Separar las coordenadass para obtener la formula */
-        int x1 = triangles[i].getPointA().getX(); int y1 = triangles[i].getPointA().getY();
-        int x2 = triangles[i].getPointB().getX(); int y2 = triangles[i].getPointB().getY();
-        int x3 = triangles[i].getPointC().getX(); int y3 = triangles[i].getPointC().getY();
-
-        maxArea += 0.5 * abs(x1 * (y2 - y3) + x2 * (y3- y1) + x3 * (y1 - y2));
+        /* Iterar los puntos para obtener el calculo del area */
+        for (size_t i = 0; i < n; ++i)
+        {
+            int j = (i + 1) % n;
+            maxArea += polygon[i].getX() * polygon[j].getY();
+            maxArea -= polygon[j].getX() * polygon[i].getY();
+        }
+        
+        /* Dividir entre dos el resultado final */
+        maxArea = Math::abs(maxArea) / 2.0;
     }
     
     return maxArea;
 }
 
 /* Funcion para obtener el perimetro del poligono */
-double getPolyPerimetro(const vector<Triangle> &triangles)
+double getPolyPerimetro(const vector<Point> &polygon)
 {
-    /* Calcular el perimetro dependiendo la cantidad de triangulos */
+    /* Preparar los datos para los calculos */
     double maxPerimetro = 0.0;
-    
-    for (size_t i = 0; i < triangles.size(); i++)
+    int n = polygon.size();
+
+    if (n >= 3)
     {
-        /* Separar las puntos para obtener la formula */
-        Point ladoA = triangles[i].getPointA();
-        Point ladoB = triangles[i].getPointA();
-        Point ladoC = triangles[i].getPointC();
+        /* Iterar los puntos para obtener el perimetro total */
+        for (size_t i = 0; i < n; ++i)
+        {
+            int j = (i + 1) % n;
+            double dX = polygon[j].getX() - polygon[i].getX();
+            double dY = polygon[j].getY() - polygon[i].getY();
 
-        /* Obtener todos los lados */
-        double ld1 = distancia(ladoA, ladoB);
-        double ld2 = distancia(ladoB, ladoC);
-        double ld3 = distancia(ladoC, ladoA);
-
-        maxPerimetro += ld1 + ld2 + ld3;
+            maxPerimetro += Math::sqrt(dX * dX + dY * dY);
+        }
     }
     
     return maxPerimetro;
