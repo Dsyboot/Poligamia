@@ -25,6 +25,15 @@ namespace dsy {
     int __draw_fillColor = 15;
     int __draw_fillStyle = SOLID_FILL;
 
+    /* Modos de limpieza de la ventana */
+    typedef enum {
+        WINDOW_CLEAR_TOP,
+        WINDOW_CLEAR_LEFT,
+        WINDOW_CLEAR_RIGHT,
+        WINDOW_CLEAR_BOTTOM,
+        WINDOW_CLEAR_FULL
+    } WindowClearMode;
+
     /* Codigo del mouse */
     enum MouseKeys {
         MOUSE_KEY_LEFT = WM_LBUTTONDOWN,
@@ -203,7 +212,7 @@ namespace dsy {
     // Clase Ventana
     class Window {
         private:
-        // Variables privadas
+        /* Variables privadas */
         bool initialized;
         int sizeX, sizeY;
         string title;
@@ -216,6 +225,7 @@ namespace dsy {
         void modifyValues(Point size, const char *title = "Window");
         void initWindow();
         void clearWindow(bool clearAll = false);
+        void clearWindowZone(Point limitI, Point limitF, RGBColor color, bool inverted = false, WindowClearMode cleanMode = WINDOW_CLEAR_FULL);
         void closeWindow();
         bool hasWindowInitialized();
         int getWindowCodeError();
@@ -442,7 +452,7 @@ namespace dsy {
 
     /* Función para inicializar la ventana */
     void Window::initWindow() {
-        initwindow(sizeX, sizeY, title.c_str());
+        initwindow(sizeX, sizeY, title.c_str(), -1, -1);
     }
 
     /* Funcion para limpiar la ventana */
@@ -457,6 +467,43 @@ namespace dsy {
             setcolor(white);
             setfillstyle(SOLID_FILL, white);
         }
+    }
+
+    /* Funcion para limpiar una zona de la pantalla */
+    void Window::clearWindowZone(Point limitI, Point limitF, RGBColor color, bool inverted, WindowClearMode cleanMode) {
+        int ori_color = Draw::getColor();
+        int ori_color2 = Draw::getFillColor();
+        int ori_style = Draw::getFillStyle();
+
+        /* Establecer el color a pintar */
+        Draw::setColor(color);
+        Draw::setFillStyle(SOLID_FILL, color);
+        
+        if (!inverted) {
+            /* Limpiar la zona de la pantalla */
+            Draw::fillRectangle(limitI.getX(), limitI.getY(), limitF.getX(), limitF.getY());
+        }
+        else {
+            /* Obtener las dimensiones externas */
+            int x = getWindowSizeX(); int y = getWindowSizeY();
+
+            if (cleanMode == WINDOW_CLEAR_TOP || cleanMode == WINDOW_CLEAR_FULL) {
+                Draw::fillPoly(vector<Point>({Point(0, 0), Point(x, 0), Point(x, limitI.getY()), Point(0, limitI.getY())}));
+            }
+            else if (cleanMode == WINDOW_CLEAR_LEFT || cleanMode == WINDOW_CLEAR_FULL) {
+                Draw::fillPoly(vector<Point>({Point(0, 0), Point(limitI.getX(), 0), Point(limitI.getX(), y), Point(0, y)}));
+            }
+            else if (cleanMode == WINDOW_CLEAR_RIGHT || cleanMode == WINDOW_CLEAR_FULL) {
+                Draw::fillPoly(vector<Point>({Point(limitF.getX(), 0), Point(x, 0), Point(x, y), Point(limitF.getX(), y)}));
+            }
+            else if (cleanMode == WINDOW_CLEAR_BOTTOM || cleanMode == WINDOW_CLEAR_FULL) {
+                Draw::fillPoly(vector<Point>({Point(0, limitF.getY()), Point(x, limitF.getY()), Point(x, y), Point(0, y)}));
+            }
+        }
+
+        /* Restaurar colores originales */
+        Draw::setColor(ori_color);
+        Draw::setFillStyle(ori_style, ori_color2);
     }
 
     /* Funcion para cerrar la ventana */

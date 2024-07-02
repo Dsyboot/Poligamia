@@ -55,9 +55,6 @@ bool isEar(const vector<Point>& polygon, size_t i);
 double getPolyArea(const vector<Point> &polygon);
 double getPolyPerimetro(const vector<Point> &polygon);
 
-/* Funciones extras de dibujo */
-void center_filled_rectangle(int cX, int cY, int radX, int radY);
-
 /* Funciones de validacion */
 bool exists(char val, size_t size, char data[]);
 bool validInt(const String &value);
@@ -233,8 +230,8 @@ void main_window() {
                 }
             }
 
-            // Limpiar pantalla
-            win.clearWindow();
+            // Limpiar centro de la pantalla
+            win.clearWindowZone(Point(selectionLimit[0].getX() + 1, selectionLimit[0].getY() + 1), Point(selectionLimit[1].getX() - 1, selectionLimit[1].getY() - 1), RGBColor(0, 0, 0));
         }
 
         if (can_show_points) {
@@ -260,10 +257,10 @@ void main_window() {
             if (can_connect) {
                 /* Ejecutar si los puntos cambian */
                 if (curPoints != polygon.size()) {
-                    win.clearWindow();
                     curPoints = polygon.size();
                     
                     if (can_triangulate) {
+                        win.clearWindowZone(Point(selectionLimit[0].getX() + 1, selectionLimit[0].getY() + 1), Point(selectionLimit[1].getX() - 1, selectionLimit[1].getY() - 1), RGBColor(0, 0, 0));
                         trian = triangulateEarClipping(polygon);
                     }
                 }
@@ -307,7 +304,7 @@ void main_window() {
         if (mousePos.getX() != oldMousePos.getX() || mousePos.getY() != oldMousePos.getY())
         {
             oldMousePos = mousePos;
-            win.clearWindow();
+            win.clearWindowZone(selectionLimit[0], Point(selectionLimit[1].getX(), selectionLimit[1].getY() + 1), RGBColor(0, 0, 0), true, WINDOW_CLEAR_BOTTOM);
         }
     }
 
@@ -870,8 +867,8 @@ void printFigureData() {
 
         /* Dibujar el texto de la derecha */
         DrawingText::configureMargin(RIGHT_TEXT, RIGHT_TEXT);
-        DrawingText::drawText(default_win_size.getX() - 20, default_win_size.getY() + 5, String::format("Area de la figura: %.2f", area).toArray());
-        DrawingText::drawText(default_win_size.getX() - 20, default_win_size.getY() + 30, String::format("Perimetro de la figura: %.2f", perimetro).toArray());
+        DrawingText::drawText(default_win_size.getX() - 20, default_win_size.getY() + 5, String::format("Area de la figura: %.2f U^2", area).toArray());
+        DrawingText::drawText(default_win_size.getX() - 20, default_win_size.getY() + 30, String::format("Perimetro de la figura: %.2f U^2", perimetro).toArray());
     }
 
     /* Cerrar la ventana grafica para finalizar */
@@ -1085,11 +1082,6 @@ double getPolyPerimetro(const vector<Point> &polygon)
     }
     
     return maxPerimetro;
-}
-
-/*######## Funciones extras de dibujo ########*/
-void center_filled_rectangle(int cX, int cY, int radX, int radY) {
-    Draw::fillRectangle(cX - radX, cY - radY, cX + radX, cY + radY);
 }
 
 /*######## Funciones de validacion ########*/
