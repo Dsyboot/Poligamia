@@ -34,6 +34,41 @@ namespace dsy {
         WINDOW_CLEAR_FULL
     } WindowClearMode;
 
+    /* Orientacion del texto */
+    typedef enum {
+        VERTICAL_TEXT,
+        HORIZONTAL_TEXT
+    } TextOrientation;
+
+    /* Justificadores de texto horizontal */
+    typedef enum {
+        HORI_LEFT_TEXT,
+        HORI_CENTER_TEXT,
+        HORI_RIGHT_TEXT
+    } TextJustifyHorizontal;
+
+    /* Justificadores de texto vertical */
+    typedef enum {
+        VERT_BOTTOM_TEXT,
+        VERT_CENTER_TEXT,
+        VERT_TOP_TEXT
+    } TextJustifyVertical;
+
+    /* Fuentes de texto disponibles */
+    typedef enum {
+        DEFAULT_FONT,
+        TRIPLEX_FONT,
+        SMALL_FONT,
+        SANS_SERIF_FONT,
+        GOTHIC_FONT,
+        SCRIPT_FONT,
+        SIMPLEX_FONT,
+        TRIPLEX_SCR_FONT,
+        COMPLEX_FONT,
+        EUROPEAN_FONT,
+        BOLD_FONT
+    } TextFontsNames;
+
     /* Codigo del mouse */
     enum MouseKeys {
         MOUSE_KEY_LEFT = WM_LBUTTONDOWN,
@@ -151,12 +186,14 @@ namespace dsy {
 
         public:
         RGBColor();
+        RGBColor(int color);
         RGBColor(byte r, byte g, byte b);
         static int getRGB(byte r, byte g, byte b);
         int getRGB() const;
         byte getRedValue() const;
         byte getGreenValue() const;
         byte getBlueValue() const;
+        void setRGB(int color);
         void setRGB(byte r, byte g, byte b);
         bool itsNULL() const;
     };
@@ -178,9 +215,7 @@ namespace dsy {
     // Clase Triangulo
     class Triangle {
         private:
-        Point a;
-        Point b;
-        Point c;
+        Point a, b, c;
 
         public:
         Triangle();
@@ -191,6 +226,27 @@ namespace dsy {
         void setPointA(Point a);
         void setPointB(Point b);
         void setPointC(Point c);
+    };
+
+    // Clase Rect para manejar limites, cajas
+    class Rect {
+        private:
+        Point a, b, c, d;
+
+        public:
+        Rect();
+        Rect(int x1, int y1, int x2, int y2);
+        Rect(Point limitI, Point limitF);
+        void setLimits(int x1, int y1, int x2, int y2);
+        void setLimits(Point limitI, Point limitF);
+        Point getPointA() const;
+        Point getPointB() const;
+        Point getPointC() const;
+        Point getPointD() const;
+        void setPointA(Point a);
+        void setPointB(Point b);
+        void setPointC(Point c);
+        void setPointD(Point d);
     };
 
     // Clase Figure para manejar figuras (Base para HitBox [en un futuro])
@@ -226,13 +282,15 @@ namespace dsy {
         void initWindow();
         void clearWindow(bool clearAll = false);
         void clearWindowZone(Point limitI, Point limitF, RGBColor color, bool inverted = false, WindowClearMode cleanMode = WINDOW_CLEAR_FULL);
+        void clearWindowZone(Rect limits, RGBColor color, bool inverted = false, WindowClearMode cleanMode = WINDOW_CLEAR_FULL);
         void closeWindow();
-        bool hasWindowInitialized();
-        int getWindowCodeError();
-        char* getWindowError(int code);
-        int getWindowSizeX();
-        int getWindowSizeY();
-        int getWindowMaxColor();
+        bool hasWindowInitialized() const;
+        int getWindowCodeError() const;
+        char* getWindowError(int code) const;
+        Point getWindowSize() const;
+        int getWindowSizeX() const;
+        int getWindowSizeY() const;
+        int getWindowMaxColor() const;
         void ticks(int tick);
         ~Window(); // Declaración del destructor
     };
@@ -266,6 +324,7 @@ namespace dsy {
         static void bar(int x1, int y1, int x2, int y2);
         static void bar3D(int x1, int y1, int x2, int y2, int mX, int mY);
         static void rectangle(int xI, int yI, int xF, int yF);
+        static void rectangle(Rect rect);
         static void arc(int cX, int cY, int angI, int angF, int radius);
         static void putPixel(int x, int y, int color);
         static int getPixel(int x, int y);
@@ -274,6 +333,7 @@ namespace dsy {
         static void drawPoly(int size, int *array, bool autoconnect = false);
         static void fillCircle(int cX, int cY, int radius);
         static void fillRectangle(int xI, int yI, int xF, int yF);
+        static void fillRectangle(Rect rect);
         static void fillEllipse(int cX, int cY, int radX, int radY);
         static void fillPoly(int size, int *array);
         
@@ -288,9 +348,20 @@ namespace dsy {
     class DrawingText {
         public:
         static void drawText(int x, int y, const char* value);
-        static void configureFont(int font, int orientation, int size);
+        static void configureFont(TextFontsNames font, TextOrientation orientation, int size);
         static void configureColor(int col);
-        static void configureMargin(int horizontal, int vertical);
+        static void configureMargin(TextJustifyHorizontal horizontal, TextJustifyVertical vertical);
+    };
+
+    // Clase para manejar Imagenes
+    class Image {
+        public:
+        static void load_image(const char* file, int startX, int startY, int endX, int endY);
+        static void load_image(const char* file, Point start, Point end);
+        static void load_image(const char* file, Rect limits);
+        static void save_image(const char* fileName, int startX, int startY, int endX, int endY);
+        static void save_image(const char* fileName, Point start, Point end);
+        static void save_image(const char* fileName, Rect limits);
     };
 
     // Clase para controlar el mouse
@@ -300,9 +371,18 @@ namespace dsy {
         static Point getMousePos();
     };
 
+    // Clase para dibujar una grid en una determinada posicion
+    class Grid {
+        public:
+        static void drawGrid(int startX, int startY, int endX, int endY, RGBColor color = RGBColor(68, 68, 68), double spacing = 5.05, bool showX = true, bool showY = true);
+        static void drawGrid(Point start, Point end, RGBColor color = RGBColor(68, 68, 68), double spacing = 5.05, bool showX = true, bool showY = true);
+        static void drawGrid(Rect limits, RGBColor color = RGBColor(68, 68, 68), double spacing = 5.05, bool showX = true, bool showY = true);
+    };
+
     /* ######## CLASE RGBCOLOR ######## */
     /* Metodo constructor vacio y definido */
     RGBColor::RGBColor() : red(0), green(0), blue(0), nullrgb(true) {}
+    RGBColor::RGBColor(int color) : red(RED_VALUE(color)), green(GREEN_VALUE(color)), blue(BLUE_VALUE(color)) {}
     RGBColor::RGBColor(byte r, byte g, byte b) : red(r), green(g), blue(b), nullrgb(false) {}
 
     /* Metodo para obtener el entero de una sentencia RGB */
@@ -321,6 +401,13 @@ namespace dsy {
         this->green = g;
         this->blue = b;
         this->nullrgb = false;
+    }
+
+    /* Metodo para establecer los valores RGB internos */
+    void RGBColor::setRGB(int color) {
+        this->red = RED_VALUE(color);
+        this->green = GREEN_VALUE(color);
+        this->blue = BLUE_VALUE(color);
     }
 
     /* Metodo para obtener el color rojo */
@@ -401,6 +488,68 @@ namespace dsy {
     /* Metodo para establecer el valor del punto C */
     void Triangle::setPointC(Point c) {
         this->c = c;
+    }
+
+    /* ######## CLASE RECT ######## */
+    /* Metodos constructores */
+    Rect::Rect() : a(Point(-1, -1)), b(Point(-1, -1)), c(Point(-1, -1)), d(Point(-1, -1)) {}
+    Rect::Rect(int x1, int y1, int x2, int y2) : a(Point(x1, y1)), b(Point(x2, y1)), c(Point(x2, y2)), d(Point(x1, y2)) {}
+    Rect::Rect(Point limitI, Point limitF) : a(limitI), b(Point(limitF.getX(), limitI.getY())), c(limitF), d(Point(limitI.getX(), limitF.getY())) {}
+    
+    /* Metodo para establecer el limite de la recta */
+    void Rect::setLimits(int x1, int y1, int x2, int y2) {
+        a = Point(x1, y1);
+        b = Point(x2, y1);
+        c = Point(x2, y2);
+        d = Point(x1, y2);
+    }
+
+    /* Metodo para establecer el limite de la recta */
+    void Rect::setLimits(Point limitI, Point limitF) {
+        a = limitI;
+        b = Point(limitF.getX(), limitI.getY());
+        c = limitF;
+        d = Point(limitI.getX(), limitF.getY());
+    }
+    
+    /* Metodo para devolver el primer punto */
+    Point Rect::getPointA() const {
+        return a;
+    }
+
+    /* Metodo para devolver el segundo punto */
+    Point Rect::getPointB() const {
+        return b;
+    }
+
+    /* Metodo para devolver el tercer punto */
+    Point Rect::getPointC() const {
+        return c;
+    }
+
+    /* Metodo para devolver el tercer punto */
+    Point Rect::getPointD() const {
+        return d;
+    }
+
+    /* Metodo para establecer el valor del punto A */
+    void Rect::setPointA(Point a) {
+        this->a = a;
+    }
+
+    /* Metodo para establecer el valor del punto B */
+    void Rect::setPointB(Point b) {
+        this->b = b;
+    }
+
+    /* Metodo para establecer el valor del punto C */
+    void Rect::setPointC(Point c) {
+        this->c = c;
+    }
+
+    /* Metodo para establecer el valor del punto C */
+    void Rect::setPointD(Point d) {
+        this->d = d;
     }
 
     /* ######## CLASE FIGURE ######## */
@@ -506,6 +655,11 @@ namespace dsy {
         Draw::setFillStyle(ori_style, ori_color2);
     }
 
+    /* Funcion para limpiar una zona de la pantalla */
+    void Window::clearWindowZone(Rect limits, RGBColor color, bool inverted, WindowClearMode cleanMode) {
+        clearWindowZone(limits.getPointA(), limits.getPointC(), color, inverted, cleanMode);
+    }
+
     /* Funcion para cerrar la ventana */
     void Window::closeWindow() {
         this->initialized = false;
@@ -513,32 +667,37 @@ namespace dsy {
     }
 
     /* Funcion para saber si la ventana ya esta iniciada */
-    bool Window::hasWindowInitialized() {
+    bool Window::hasWindowInitialized() const {
         return initialized;
     }
 
     /* Funcion para obtener un codigo de error */
-    int Window::getWindowCodeError() {
+    int Window::getWindowCodeError() const {
         return graphresult();
     }
 
     /* Funcion para obtener un mensaje de error en los gráficos */
-    char* Window::getWindowError(int code) {
+    char* Window::getWindowError(int code) const {
         return grapherrormsg(code);
     }
 
+    /* Funcion para obtener el tamanio total de la pantalla */
+    Point Window::getWindowSize() const {
+        return Point(getmaxx(), getmaxy());
+    }
+
     /* Funcion para obtener el ancho de la pantalla */
-    int Window::getWindowSizeX() {
+    int Window::getWindowSizeX() const {
         return getmaxx();
     }
 
     /* Funcion para obtener el alto de la pantalla */
-    int Window::getWindowSizeY() {
+    int Window::getWindowSizeY() const {
         return getmaxy();
     }
 
     /* Funcion para obtener el color maximo de la pantalla */
-    int Window::getWindowMaxColor() {
+    int Window::getWindowMaxColor() const {
         return getmaxcolor() + 1;
     }
 
@@ -678,6 +837,11 @@ namespace dsy {
         ::rectangle(xI, yI, xF, yF);
     }
 
+    /* Funcion para crear un rectangulo */
+    void Draw::rectangle(Rect rect) {
+        rectangle(rect.getPointA().getX(), rect.getPointA().getY(), rect.getPointC().getX(), rect.getPointC().getY());
+    }
+
     /* Funcion para crear un arco */
     void Draw::arc(int cX, int cY, int angI, int angF, int radius) {
         ::arc(cX, cY, angI, angF, radius);
@@ -717,13 +881,18 @@ namespace dsy {
         ::fillellipse(cX, cY, radius, radius);
     }
 
-    /* Funcion para crear un rectángulo relleno */
+    /* Funcion para crear un rectangulo relleno */
     void Draw::fillRectangle(int xI, int yI, int xF, int yF) {
         int data[8];
         data[0] = xI; data[2] = xF; data[4] = xF; data[6] = xI;
         data[1] = yI; data[3] = yI; data[5] = yF; data[7] = yF;
         
         ::fillpoly(4, data);
+    }
+
+    /* Funcion para crear un rectangulo relleno */
+    void Draw::fillRectangle(Rect rect) {
+        fillRectangle(rect.getPointA().getX(), rect.getPointA().getY(), rect.getPointC().getX(), rect.getPointC().getY());
     }
 
     /* Funcion para crear una elipse rellena */
@@ -809,7 +978,7 @@ namespace dsy {
     }
 
     /* Metodo para configurar el fondo del texto */
-    void DrawingText::configureFont(int font, int orientation, int size) {
+    void DrawingText::configureFont(TextFontsNames font, TextOrientation orientation, int size) {
         ::settextstyle(font, orientation, size);
     }
 
@@ -819,8 +988,39 @@ namespace dsy {
     }
 
     /* Metodo para configurar el margen del texto */
-    void DrawingText::configureMargin(int horizontal, int vertical) {
+    void DrawingText::configureMargin(TextJustifyHorizontal horizontal, TextJustifyVertical vertical) {
         ::settextjustify(horizontal, vertical);
+    }
+
+    /* ######## CLASE IMAGE ########*/
+    /* Metodo para cargar una imagen */
+    void Image::load_image(const char* file, int startX, int startY, int endX, int endY) {
+        readimagefile(file, startX, startY, endX, endY);
+    }
+
+    /* Metodo para cargar una imagen */
+    void Image::load_image(const char *file, Point start, Point end) {
+        load_image(file, start.getX(), start.getY(), end.getX(), end.getY());
+    }
+
+    /* Metodo para cargar una imagen */
+    void Image::load_image(const char *file, Rect limits) {
+        load_image(file, limits.getPointA(), limits.getPointC());
+    }
+
+    /* Metodo para guardar un espacio de la ventana en un archivo */
+    void Image::save_image(const char *fileName, int startX, int startY, int endX, int endY) {
+        writeimagefile(fileName, startX, startY, endX, endY);
+    }
+
+    /* Metodo para guardar un espacio de la ventana en un archivo */
+    void Image::save_image(const char *fileName, Point start, Point end) {
+        save_image(fileName, start.getX(), start.getY(), end.getX(), end.getY());
+    }
+
+    /* Metodo para guardar un espacio de la ventana en un archivo */
+    void Image::save_image(const char *fileName, Rect limits) {
+        save_image(fileName, limits.getPointA(), limits.getPointC());
     }
 
     /* ######### CLASE MOUSE ######## */
@@ -835,7 +1035,50 @@ namespace dsy {
     Point Mouse::getMousePos() {
         return Point(mousex(), mousey());
     }
-    
+
+    /* ######## CLASE GRID ######## */
+    /* Metodo para dibujar la grid */
+    void Grid::drawGrid(int startX, int startY, int endX, int endY, RGBColor color, double spacing, bool showX, bool showY) {
+        // Guardar el color original
+        int ori_color = Draw::getColor();
+
+        // Establecer el color de dibujo
+        spacing = abs(spacing) * 2.95;
+        Draw::setColor(color);
+
+        // Dibujar las líneas horizontales
+        if (showX) {
+            for (double i = startX; i <= endX; i += spacing) {
+                int x1 = (int)i; int y1 = startY;
+                int x2 = x1; int y2 = endY;
+
+                Draw::line(x1, y1, x2, y2);
+            }
+        }
+
+        // Dibujar las líneas verticales
+        if (showY) {
+            for (double i = startY; i <= endY; i += spacing) {
+                int x1 = startX; int y1 = (int)i;
+                int x2 = endX; int y2 = y1;
+
+                Draw::line(x1, y1, x2, y2);
+            }
+        }
+
+        // Restablecer el color de dibujo original
+        Draw::setColor(ori_color);
+    }
+
+    /* Metodo para dibujar la grid */
+    void Grid::drawGrid(Point start, Point end, RGBColor color, double spacing, bool showX, bool showY) {
+        drawGrid(start.getX(), start.getY(), end.getX(), end.getY(), color, spacing, showX, showY);
+    }
+
+    /* Metodo para dibujar la grid */
+    void Grid::drawGrid(Rect limits, RGBColor color, double spacing, bool showX, bool showY) {
+        drawGrid(limits.getPointA(), limits.getPointC(), color, spacing, showX, showY);
+    }
 }
 
 #endif // DSYGRAPH_HPP

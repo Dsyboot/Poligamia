@@ -5,6 +5,12 @@ Autor Padre: Dsyboot
 
 Tareas pendientes:
 
-[  ] Hacer GRID para los polinomios
+[ X ] Hacer el plano cartesiano para los polinomios
 
-[  ] Arreglar / Minimizar los parpadeos del programa
+[ X ] Agregar todos los enums en dsygraph.h de graphics.h
+
+[ X ] Crear la clase Rect y modificar el proyecto para usarlo
+
+[ X ] Agregar soporte de imagenes en dsygraph.h
+
+[ X ] Agregar sistema de guardado de imagenes :0

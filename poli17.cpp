@@ -1,7 +1,6 @@
 /* Importar las librerias */
 #include <iostream>
 #include <vector>
-#include <cmath>
 #include <fstream>
 #include <json.hpp>
 #include "dsygraph.hpp"
@@ -20,10 +19,11 @@ Point default_win_size(640, 480);
 RGBColor default_border_color(18, 226, 216); // Celeste
 RGBColor default_points_color(255, 128, 0); // Naranja
 RGBColor default_line_color(255, 255, 255); // Blanco
-bool can_connect = false; // Botón C
-bool can_line_appear = true; // Botón L
-bool can_show_points = true; // Botón P
-bool can_triangulate = false; // Botón T
+bool can_show_grid = false; // Boton G
+bool can_connect = false; // Boton C
+bool can_line_appear = true; // Boton L
+bool can_show_points = true; // Boton P
+bool can_triangulate = false; // Boton T
 bool show_points_quantity = true;
 bool show_triangles_quantity = true;
 bool show_mouse_coordinates = true;
@@ -140,7 +140,8 @@ void main_window() {
     /* Variables controladoras */
     int key = 0, curPoints = -1;
     int trianPTS = 0; // Para obtener las teclas presionadas
-    Point selectionLimit[] = {Point(10, 10), Point(default_win_size.getX() - 10, default_win_size.getY() - 10)}; // Para el borde
+    Rect selectionLimit(10, 10, default_win_size.getX() - 10, default_win_size.getY() - 10); // Para el borde
+    Rect gridLimits(11, 11, default_win_size.getX() - 11, default_win_size.getY() - 11); // Para el Grid
 
     /* Arreglo de puntos y triangulos */
     vector<Point> polygon;
@@ -158,10 +159,14 @@ void main_window() {
         if (Mouse::mouseKeyClicked(MOUSE_KEY_LEFT)) {
             if (old.getX() != mousePos.getX() || old.getY() != mousePos.getY()) {
                 /* Poner los puntos dentro de los limites del borde */
-                if ((mousePos.getX() > selectionLimit[0].getX() && mousePos.getY() > selectionLimit[0].getY()) && (mousePos.getX() < selectionLimit[1].getX() && mousePos.getY() < selectionLimit[1].getY()))
+                if ((mousePos.getX() > selectionLimit.getPointA().getX() && mousePos.getY() > selectionLimit.getPointA().getY()) && (mousePos.getX() < selectionLimit.getPointC().getX() && mousePos.getY() < selectionLimit.getPointC().getY()))
                 {
                     polygon.push_back(mousePos);
                     old = mousePos;
+
+                    if (can_connect) {
+                        win.clearWindowZone(Point(selectionLimit.getPointA().getX() + 1, selectionLimit.getPointA().getY() + 1), Point(selectionLimit.getPointC().getX() - 1, selectionLimit.getPointC().getY() - 1), RGBColor(0));
+                    }
                 }
             }
         }
@@ -175,6 +180,11 @@ void main_window() {
             }
             
             /*## Control de botones ##*/
+            /* Si se presiona, se controla la cuadricula */
+            if (key == KEYBOARD_KEY_G) {
+                can_show_grid = !can_show_grid;
+            }
+
             /* Si se presiona, se controla la conexion de los puntos */
             if (key == KEYBOARD_KEY_C) {
                 can_connect = !can_connect;
@@ -197,9 +207,9 @@ void main_window() {
                 {
                     saveFigureFromFile("saved_figure.json", Figure(polygon, "default"));
                     win.clearWindow();
-                    DrawingText::configureMargin(CENTER_TEXT, CENTER_TEXT);
+                    DrawingText::configureMargin(HORI_CENTER_TEXT, VERT_CENTER_TEXT);
                     DrawingText::drawText(win.getWindowSizeX() / 2, win.getWindowSizeY() / 2,"Guardando la figura...");
-                    DrawingText::configureMargin(LEFT_TEXT, LEFT_TEXT);
+                    DrawingText::configureMargin(HORI_LEFT_TEXT, VERT_BOTTOM_TEXT);
                     delay(1500);
 
                     /* Esperar que se termine de presionar las teclas */
@@ -227,11 +237,16 @@ void main_window() {
                 {
                     polygon.pop_back();
                     trianPTS = polygon.size() < 3 ? 0 : trianPTS;
+                    win.clearWindowZone(selectionLimit.getPointA(), Point(selectionLimit.getPointC().getX(), selectionLimit.getPointC().getY() + 1), RGBColor(0), true, WINDOW_CLEAR_BOTTOM);
                 }
             }
 
             // Limpiar centro de la pantalla
-            win.clearWindowZone(Point(selectionLimit[0].getX() + 1, selectionLimit[0].getY() + 1), Point(selectionLimit[1].getX() - 1, selectionLimit[1].getY() - 1), RGBColor(0, 0, 0));
+            win.clearWindowZone(Point(selectionLimit.getPointA().getX() + 1, selectionLimit.getPointA().getY() + 1), Point(selectionLimit.getPointC().getX() - 1, selectionLimit.getPointC().getY() - 1), RGBColor(0));
+        }
+
+        if (can_show_grid) {
+            Grid::drawGrid(gridLimits);
         }
 
         if (can_show_points) {
@@ -254,15 +269,12 @@ void main_window() {
                 Draw::circle(polygon[0].getX(), polygon[0].getY(), 1);
             }
 
-            if (can_connect) {
+            if (can_connect && can_triangulate) {
                 /* Ejecutar si los puntos cambian */
                 if (curPoints != polygon.size()) {
+                    win.clearWindowZone(Point(selectionLimit.getPointA().getX() + 1, selectionLimit.getPointA().getY() + 1), Point(selectionLimit.getPointC().getX() - 1, selectionLimit.getPointC().getY() - 1), RGBColor(0));
                     curPoints = polygon.size();
-                    
-                    if (can_triangulate) {
-                        win.clearWindowZone(Point(selectionLimit[0].getX() + 1, selectionLimit[0].getY() + 1), Point(selectionLimit[1].getX() - 1, selectionLimit[1].getY() - 1), RGBColor(0, 0, 0));
-                        trian = triangulateEarClipping(polygon);
-                    }
+                    trian = triangulateEarClipping(polygon);
                 }
 
                 /* Dibujar si la longitud no es 0 */
@@ -277,26 +289,26 @@ void main_window() {
         /* Dibujar contorno decorativo de la ventana (RGB / CELESTE) */
         RGBColor rgb_values = Draw::generateRGB(3.9);
         default_border_color.itsNULL() ? Draw::setColor(rgb_values) : Draw::setColor(default_border_color); // Establecer el color del borde
-        Draw::rectangle(selectionLimit[0].getX(), selectionLimit[0].getY(), selectionLimit[1].getX(), selectionLimit[1].getY());
+        Draw::rectangle(selectionLimit);
 
         /* Mostrar la cantidad de puntos si esta permitido */
         if (show_points_quantity)
         {
-            DrawingText::configureMargin(LEFT_TEXT, CENTER_TEXT);
+            DrawingText::configureMargin(HORI_LEFT_TEXT, VERT_CENTER_TEXT);
             DrawingText::drawText(20, size.getY() - 15, String::format("Puntos: %d", polygon.size()).toArray());
         }
 
         /* Mostrar la cantidad de triangulos si esta permitido */
         if (show_triangles_quantity)
         {
-            DrawingText::configureMargin(RIGHT_TEXT, CENTER_TEXT);
+            DrawingText::configureMargin(HORI_RIGHT_TEXT, VERT_CENTER_TEXT);
             DrawingText::drawText(size.getX() - 20, size.getY() - 15, String::format("Triangulos: %d", trianPTS).toArray());
         }
 
         /* Mostrar las coordenas del mouse si esta permitido */
         if (show_mouse_coordinates)
         {
-            DrawingText::configureMargin(CENTER_TEXT, CENTER_TEXT);
+            DrawingText::configureMargin(HORI_CENTER_TEXT, VERT_CENTER_TEXT);
             DrawingText::drawText(size.getX() / 2, size.getY() - 15, String::format("Coordenadas del mouse: (%d, %d)", mousePos.getX(), mousePos.getY()).toArray());
         }
 
@@ -304,7 +316,7 @@ void main_window() {
         if (mousePos.getX() != oldMousePos.getX() || mousePos.getY() != oldMousePos.getY())
         {
             oldMousePos = mousePos;
-            win.clearWindowZone(selectionLimit[0], Point(selectionLimit[1].getX(), selectionLimit[1].getY() + 1), RGBColor(0, 0, 0), true, WINDOW_CLEAR_BOTTOM);
+            win.clearWindowZone(selectionLimit.getPointA(), Point(selectionLimit.getPointC().getX(), selectionLimit.getPointC().getY() + 1), RGBColor(0), true, WINDOW_CLEAR_BOTTOM);
         }
     }
 
@@ -318,7 +330,7 @@ void load_config() {
     ordered_json fileData = load_json("poligamia.json");
     Point winsize;
     RGBColor border_color, points_color, line_color;
-    bool csp, ctl, cc, ct, spq, stq, smc;
+    bool csp, csg, ctl, cc, ct, spq, stq, smc;
 
     /* Intentar obtener todos los valores y cargarlos */
     try
@@ -336,6 +348,7 @@ void load_config() {
 
         /* Obtener las opciones que se usan en el programa */
         csp = fileData["config_data"]["information"]["can_show_points"];
+        csg = fileData["config_data"]["information"]["can_show_grid"];
         ctl = fileData["config_data"]["information"]["can_trace_lines"];
         cc = fileData["config_data"]["information"]["can_connect"];
         ct = fileData["config_data"]["information"]["can_triangulate"];
@@ -349,6 +362,7 @@ void load_config() {
         default_line_color = line_color;
         default_points_color = points_color;
         can_show_points = csp;
+        can_show_grid = csg;
         can_line_appear = ctl;
         can_connect = cc;
         can_triangulate = ct;
@@ -371,7 +385,7 @@ void save_config(bool console) {
     ordered_json fileData = load_json("poligamia.json");
     Point winsize;
     RGBColor border_color, points_color, line_color;
-    bool csp, ctl, cc, ct, spq, stq, smc;
+    bool csp, csg, ctl, cc, ct, spq, stq, smc;
     String opcion;
 
     /* Cargar las variables con los valores del json si es que no esta vacio */
@@ -390,6 +404,7 @@ void save_config(bool console) {
 
         /* Obtener las opciones que se usan en el programa */
         csp = fileData["config_data"]["information"]["can_show_points"];
+        csg = fileData["config_data"]["information"]["can_show_grid"];
         ctl = fileData["config_data"]["information"]["can_trace_lines"];
         cc = fileData["config_data"]["information"]["can_connect"];
         ct = fileData["config_data"]["information"]["can_triangulate"];
@@ -404,6 +419,7 @@ void save_config(bool console) {
         points_color = default_points_color;
         line_color = default_line_color;
         csp = can_show_points;
+        csg = can_show_grid;
         ctl = can_line_appear;
         cc = can_connect;
         ct = can_triangulate;
@@ -662,12 +678,13 @@ void save_config(bool console) {
                         cout<<"Configuracion Avanzada\n\n";
                         cout<<"Elija el numero de una opcion:\n";
                         cout<<String::format("1. Mostrar los puntos de la figura (%s)\n", csp ? "Activo" : "Inactivo");
-                        cout<<String::format("2. Mostrar las lineas de la figura (%s)\n", ctl ? "Activo" : "Inactivo");
-                        cout<<String::format("3. Permitir conexion de las lineas (%s)\n", cc ? "Activo" : "Inactivo");
-                        cout<<String::format("4. Mostrar la triangulacion de la figura (%s)\n", ct ? "Activo" : "Inactivo");
-                        cout<<String::format("5. Mostrar la cantidad de puntos de la figura (%s)\n", spq ? "Activo" : "Inactivo");
-                        cout<<String::format("6. Mostrar la cantidad de triangulos de la figura (%s)\n", stq ? "Activo" : "Inactivo");
-                        cout<<String::format("7. Mostrar las coordenadas del mouse (%s)\n", smc ? "Activo" : "Inactivo");
+                        cout<<String::format("2. Permitir mostrar la cuadricula (%s)\n", csg ? "Activo" : "Inactivo");
+                        cout<<String::format("3. Mostrar las lineas de la figura (%s)\n", ctl ? "Activo" : "Inactivo");
+                        cout<<String::format("4. Permitir conexion de las lineas (%s)\n", cc ? "Activo" : "Inactivo");
+                        cout<<String::format("5. Mostrar la triangulacion de la figura (%s)\n", ct ? "Activo" : "Inactivo");
+                        cout<<String::format("6. Mostrar la cantidad de puntos de la figura (%s)\n", spq ? "Activo" : "Inactivo");
+                        cout<<String::format("7. Mostrar la cantidad de triangulos de la figura (%s)\n", stq ? "Activo" : "Inactivo");
+                        cout<<String::format("8. Mostrar las coordenadas del mouse (%s)\n", smc ? "Activo" : "Inactivo");
                         cout<<"Otro: Volver atras"<<endl;
                         cout<<">>> ";
                         cin>>input;
@@ -680,25 +697,29 @@ void save_config(bool console) {
                             }
                             else if (input.equals("2"))
                             {
-                                ctl = !ctl;
+                                csg = !csg;
                             }
                             else if (input.equals("3"))
                             {
-                                cc = !cc;
+                                ctl = !ctl;
                             }
                             else if (input.equals("4"))
                             {
-                                ct = !ct;
+                                cc = !cc;
                             }
                             else if (input.equals("5"))
                             {
-                                spq = !spq;
+                                ct = !ct;
                             }
                             else if (input.equals("6"))
                             {
-                                stq = !stq;
+                                spq = !spq;
                             }
                             else if (input.equals("7"))
+                            {
+                                stq = !stq;
+                            }
+                            else if (input.equals("8"))
                             {
                                 smc = !smc;
                             }
@@ -750,6 +771,7 @@ void save_config(bool console) {
 
     /* Configurar las opciones que se usan en el programa */
     fileData["config_data"]["information"]["can_show_points"] = csp;
+    fileData["config_data"]["information"]["can_show_grid"] = csg;
     fileData["config_data"]["information"]["can_trace_lines"] = ctl;
     fileData["config_data"]["information"]["can_connect"] = cc;
     fileData["config_data"]["information"]["can_triangulate"] = ct;
@@ -775,11 +797,13 @@ void info_window() {
     /* Mostrar informacion de los botones */
     cout<<"Teclas especiales: \n\n";
     cout<<"Boton ESC: Funciona para salir de la ventana sin afectar el programa completamente\n";
+    cout<<"Boton DEL: Funciona para borrar el ultimo punto ingresado\n";
+    cout<<"Boton G: Sirve para mostrar la cuadricula\n";
     cout<<"Boton P: Sirve para mostrar los puntos de la figura\n";
     cout<<"Boton L: Sirve para mostrar las lineas donde van los puntos de la figura\n";
     cout<<"Boton C: Sirve para conectar los puntos de la figura\n";
     cout<<"Boton T: Sirve para mostrar la triangulacion de la figura (Tener en cuenta que el algoritmo no siempre lo hara)\n";
-    cout<<"Boton S: Sirve para guardar la figura actual, lo que sera util para obtener su area y perimetro\n\n";
+    cout<<"Boton S: Sirve para guardar la figura actual, lo que sera util para obtener su area y perimetro (Hasta para guardar la imagen!!)\n\n";
 
     /* Mostrar comentarios extras */
     cout<<"Notas: \n\nEl programa puede contener algunos errores visuales o en la triangulacion, ya que el algoritmo utilizado fue el de earClipping, un algoritmo que intenta buscar 'orejas' para triangular, en ciertos casos puede simplemente no funcionar, por favor comprenda que no todows los algoritmos son perfectos, ademas, este es el mas rapido y eficiente cuando se habla de la memoria\n\n";
@@ -800,7 +824,8 @@ void printFigureData() {
     vector<Point> pointData = figurits.getPoints();
     vector<Triangle> triangData = triangulateEarClipping(pointData);
     bool triangulable = triangData.size() == 0 ? false : true;
-    Point selectionLimit[] = {Point(10, 10), Point(default_win_size.getX() - 10, default_win_size.getY() - 10)}; // Para el borde
+    Rect selectionLimit(10, 10, default_win_size.getX() - 10, default_win_size.getY() - 10); // Para el borde
+    Rect gridLimits(11, 11, default_win_size.getX() - 11, default_win_size.getY() - 11); // Para el Grid
 
     /* Calcular el area y el perimetro de la figura */
     double area = getPolyArea(pointData);
@@ -820,18 +845,48 @@ void printFigureData() {
                 break;
             }
 
+            /* Si se presiona, se controla si se puede mostrar la cuadricula */
+            if (key == KEYBOARD_KEY_G) {
+                can_show_grid = !can_show_grid;
+            }
+
             /* Si se presiona, se controla la observacion de puntos */
             if (key == KEYBOARD_KEY_P) {
                 can_show_points = !can_show_points;
-                win.clearWindow();
             }
 
             /* Si se presiona, se controla la generacion de triangulacion */
             if (key == KEYBOARD_KEY_T) {
                 trianPoints = 0;
                 can_triangulate = !can_triangulate;
-                win.clearWindow();
             }
+
+            /* Si se presiona, se guardara la figura como si fuese una imagen */
+            if (key == KEYBOARD_KEY_S)
+            {
+                Image::save_image(NULL, selectionLimit); /* Guardar la imagen */
+                win.clearWindow();
+                DrawingText::configureMargin(HORI_CENTER_TEXT, VERT_CENTER_TEXT);
+                DrawingText::drawText(win.getWindowSizeX() / 2, win.getWindowSizeY() / 2,"Generando una imagen...");
+                DrawingText::configureMargin(HORI_LEFT_TEXT, VERT_BOTTOM_TEXT);
+                delay(1500);
+
+                /* Esperar que se termine de presionar las teclas */
+                while (true) {
+                    if (kbhit()) {
+                        char crt = getch();
+                    }
+                    else {
+                        break;
+                    }
+                }
+            }
+
+            win.clearWindow();
+        }
+
+        if (can_show_grid) {
+            Grid::drawGrid(gridLimits);
         }
 
         /* Dibujar la figura */
@@ -858,15 +913,15 @@ void printFigureData() {
         /* Dibujar contorno decorativo de la ventana (RGB / CELESTE) */
         RGBColor rgb_values = Draw::generateRGB(3.9);
         default_border_color.itsNULL() ? Draw::setColor(rgb_values) : Draw::setColor(default_border_color); // Establecer el color del borde
-        Draw::rectangle(selectionLimit[0].getX(), selectionLimit[0].getY(), selectionLimit[1].getX(), selectionLimit[1].getY());
+        Draw::rectangle(selectionLimit);
 
         /* Dibujar el texto de la izquierda */
-        DrawingText::configureMargin(LEFT_TEXT, RIGHT_TEXT);
+        DrawingText::configureMargin(HORI_LEFT_TEXT, VERT_TOP_TEXT);
         DrawingText::drawText(20, default_win_size.getY() + 5, String::format("Puntos: %d", pointData.size()).toArray());
         DrawingText::drawText(20, default_win_size.getY() + 30, String::format("Triangulos: %d", trianPoints).toArray());
 
         /* Dibujar el texto de la derecha */
-        DrawingText::configureMargin(RIGHT_TEXT, RIGHT_TEXT);
+        DrawingText::configureMargin(HORI_RIGHT_TEXT, VERT_TOP_TEXT);
         DrawingText::drawText(default_win_size.getX() - 20, default_win_size.getY() + 5, String::format("Area de la figura: %.2f U^2", area).toArray());
         DrawingText::drawText(default_win_size.getX() - 20, default_win_size.getY() + 30, String::format("Perimetro de la figura: %.2f U^2", perimetro).toArray());
     }
